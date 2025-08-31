@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Content Classifier</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #194E70 0%, #6FA8DC 100%);
+      min-height: 100vh;
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    .floating-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .shape {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .shape:nth-child(1) { width: 80px; height: 80px; top: 20%; left: 10%; animation-delay: 0s; }
+    .shape:nth-child(2) { width: 120px; height: 120px; top: 60%; right: 20%; animation-delay: 2s; }
+    .shape:nth-child(3) { width: 60px; height: 60px; bottom: 30%; left: 30%; animation-delay: 4s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
+    .app {
+      max-width: 800px;
+      margin: 20px auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #B5B5BE, #B5B5BE);
+      border-radius: 15px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: black;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: black;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+
+    .input-section {
+      margin-bottom: 30px;
+    }
+
+    .input-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #444;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      border: 2px solid #e1e8ed;
+      border-radius: 15px;
+      padding: 20px;
+      font-size: 16px;
+      resize: vertical;
+      transition: all 0.3s ease;
+      background: #fafbfc;
+      font-family: inherit;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .classify-btn {
+      padding: 18px 30px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .classify-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .classify-btn:hover::before {
+      left: 100%;
+    }
+
+    .hate-btn {
+      background: linear-gradient(135deg, #FFECB7, #FFECB7);
+      color: black;
+    }
+
+    .hate-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(238, 90, 36, 0.3);
+    }
+
+    .misinfo-btn {
+      background: linear-gradient(135deg, #FFECB7, #FFECB7);
+      color: black;
+    }
+
+    .misinfo-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(254, 202, 87, 0.3);
+    }
+
+    .results-section {
+      margin-top: 30px;
+    }
+
+    #result {
+      padding: 25px;
+      border-radius: 15px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 18px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.5s ease;
+      background: #f8f9fa;
+      border: 2px dashed #dee2e6;
+    }
+
+    .result-safe {
+      background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+      color: black;
+      border: none;
+      animation: slideIn 0.5s ease;
+    }
+
+    .result-warning {
+      background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+      color: #2d3436;
+      border: none;
+      animation: slideIn 0.5s ease;
+    }
+
+    .result-danger {
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      color: black;
+      border: none;
+      animation: slideIn 0.5s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .loading {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    @media (max-width: 600px) {
+      .app { margin: 10px; padding: 20px; }
+      .btn-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 24px; }
+      .stats { grid-template-columns: 1fr; }
+
+    
+    }
+  </style>
+</head>
+<body>
+  <div class="floating-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+  </div>
+
+  <div class="app">
+    <div class="header">
+      <div class="logo">🛡️</div>
+      <h1>AI Content Classifier</h1>
+      <p class="subtitle">Advanced AI-powered smart content classification</p>
+    </div>
+
+    <div class="input-section">
+      <label class="input-label">Enter text to analyze:</label>
+      <textarea id="inputText" placeholder="Paste your input text here..."></textarea>
+    </div>
+
+    <div class="btn-grid">
+      <button class="classify-btn hate-btn" onclick="checkHate()">
+        🚫 Detect Hate Speech
+      </button>
+      <button class="classify-btn misinfo-btn" onclick="checkMisinformation()">
+        🔍 Check Misinformation
+      </button>
+      
+    </div>
+
+    <div class="results-section">
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <span style="margin-left: 10px;">Analyzing with AI...</span>
+      </div>
+      <div id="result">Ready to analyze your content</div>
+     
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number" id="analysisCount">0</div>
+        <div class="stat-label">Texts Analyzed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="safeCount">0</div>
+        <div class="stat-label">Safe Content</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="flaggedCount">0</div>
+        <div class="stat-label">Flagged Content</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple statistics tracking
+    let stats = {
+      total: 0,
+      safe: 0,
+      flagged: 0
+    };
+
+    // Load stats from memory
+    if (window.statsData) {
+      stats = window.statsData;
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('analysisCount').textContent = stats.total;
+      document.getElementById('safeCount').textContent = stats.safe;
+      document.getElementById('flaggedCount').textContent = stats.flagged;
+      window.statsData = stats; // Save to memory
+    }
+
+    function showLoading() {
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('result').style.display = 'none';
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('result').style.display = 'flex';
+    }
+
+    function showResult(message, type) {
+      const result = document.getElementById('result');
+      result.textContent = message;
+      result.className = `result-${type}`;
+      hideLoading();
+      
+      stats.total++;
+      if (type === 'safe') {
+        stats.safe++;
+      } else {
+        stats.flagged++;
+      }
+      updateStats();
+    }
+
+    // API Configuration - Update these URLs to match your model endpoints
+    const API_CONFIG = {
+      HATE_SPEECH_API: 'http://127.0.0.1:8000/api/hate-speech',   // Replace with your hate speech model API
+      MISINFORMATION_EXPLAIN_API: 'http://127.0.0.1:8000/api/misinformation-explain',
+      MISINFORMATION_API: 'http://127.0.0.1:8000/api/misinformation',  // Replace with your misinformation model API
+      API_KEY: 'your-api-key-here'  // Add your API key if needed
+    };
+
+    // Generic function to call your trained models
+    async function callModel(apiUrl, text, modelType) {
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_CONFIG.API_KEY}`,  // Remove if no API key needed
+          },
+          body: JSON.stringify({
+            text: text,
+            model_type: modelType
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error(`Error calling ${modelType} model:`, error);
+        return {
+          error: true,
+          message: `Failed to connect to ${modelType} model. Please check your API connection.`
+        };
+      }
+    }
+
+    // Hate Speech Detection using your trained model
+    async function checkHate() {
+      const text = document.getElementById('inputText').value.trim();
+      
+      if (!text) {
+        showResult('⚠️ Please enter some text to analyze', 'warning');
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const result = await callModel(API_CONFIG.HATE_SPEECH_API, text, 'hate_speech');
+        
+        if (result.error) {
+          showResult(result.message, 'warning');
+          return;
+        }
+
+        // Process your model's response - adjust these based on your model's output format
+        const processedResult = processHateSpeechResult(result);
+        showResult(processedResult.message, processedResult.type);
+        
+      } catch (error) {
+        console.error('Hate speech detection error:', error);
+        showResult('🔴 Error: Could not analyze text. Please try again.', 'warning');
+      }
+    }
+
+    // Misinformation Detection using your trained model
+    async function checkMisinformation() {
+      const text = document.getElementById('inputText').value.trim();
+      
+      if (!text) {
+        showResult('⚠️ Please enter some text to analyze', 'warning');
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const result = await callModel(API_CONFIG.MISINFORMATION_API, text, 'misinformation');
+        
+        if (result.error) {
+          showResult(result.message, 'warning');
+          return;
+        }
+
+        // Process your model's response - adjust these based on your model's output format
+        const processedResult = processMisinformationResult(result);
+        showResult(processedResult.message, processedResult.type);
+        
+      } catch (error) {
+        console.error('Misinformation detection error:', error);
+        showResult('🔴 Error: Could not analyze text. Please try again.', 'warning');
+      }
+    }
+
+    // Process hate speech model results - CUSTOMIZE THIS based on your model's output
+    function processHateSpeechResult(modelResult) {
+      // Example expected format from your model:
+      // { prediction: "hate/not_hate", confidence: 0.85, explanation: "..." }
+      
+      const confidence = modelResult.confidence || modelResult.score || 0;
+      const prediction = modelResult.prediction || modelResult.label || 'unknown';
+      const explanation = modelResult.explanation || modelResult.reason || '';
+      
+      const confidencePercent = Math.round(confidence * 100);
+      
+      // Determine result type based on your model's output
+      if (prediction.toLowerCase().includes('hate') || prediction === 1) {
+        return {
+          message: `🚨 HATE SPEECH DETECTED (${confidencePercent}% confidence)\n${explanation}`,
+          type: 'danger'
+        };
+      } else if (confidence < 0.7) {  // Low confidence threshold
+        return {
+          message: `⚠️ UNCERTAIN CLASSIFICATION (${confidencePercent}% confidence)\nContent may need human review. ${explanation}`,
+          type: 'warning'
+        };
+      } else {
+        return {
+          message: `✅ SAFE CONTENT (${confidencePercent}% confidence)\nNo hate speech detected. ${explanation}`,
+          type: 'safe'
+        };
+      }
+    }
+
+    // Process misinformation model results - CUSTOMIZE THIS based on your model's output
+    function processMisinformationResult(modelResult) {
+      // Example expected format from your model:
+      // { prediction: "misinformation/reliable", confidence: 0.92, explanation: "..." }
+      
+      const confidence = modelResult.confidence || modelResult.score || 0;
+      const prediction = modelResult.prediction || modelResult.label || 'unknown';
+      const explanation = modelResult.explanation || modelResult.reason || '';
+      
+      const confidencePercent = Math.round(confidence * 100);
+      
+      // Determine result type based on your model's output
+      if (prediction.toLowerCase().includes('misinformation') || prediction === 1) {
+        return {
+          message: `🚨 MISINFORMATION DETECTED (${confidencePercent}% confidence)\n${explanation}`,
+          type: 'danger'
+        };
+      } else if (confidence < 0.7) {  // Low confidence threshold
+        return {
+          message: `⚠️ UNCERTAIN CLASSIFICATION (${confidencePercent}% confidence)\nContent credibility unclear. ${explanation}`,
+          type: 'warning'
+        };
+      } else {
+        return {
+          message: `✅ RELIABLE CONTENT (${confidencePercent}% confidence)\nNo misinformation detected. ${explanation}`,
+          type: 'safe'
+        };
+      }
+    }
+    /*async function checkExplanation() {
+    const text = document.getElementById('inputText').value.trim();
+    if (!text) {
+        showResult('⚠️ Please enter some text to analyze', 'warning');
+        return;
+    }
+    showLoading();
+
+    try {
+        const response = await fetch(API_CONFIG.MISINFORMATION_EXPLAIN_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: text })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("API Response:", data);
+
+        if (data && data.explanation_html) {
+            // Clear previous result
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "";
+
+            // Create a fresh iframe
+            const iframe = document.createElement("iframe");
+            iframe.style.width = "100%";
+            iframe.style.height = "600px";
+            iframe.style.border = "none";
+            resultDiv.appendChild(iframe);
+
+            // Inject HTML into iframe
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(data.explanation_html);
+            doc.close();
+        } else {
+            showResult('⚠️ The explanation could not be generated or was empty.', 'warning');
+        }
+
+    } catch (error) {
+        console.error('Explanation error:', error);
+        showResult(`🔴 Error: ${error.message}. Please check your API connection.`, 'warning');
+    } finally {
+        hideLoading();
+    }
+}*/
+
+  // <iframe id="resultFrame" style="display:none;"></iframe>
+    /*  async function checkExplanation() {
+    const text = document.getElementById('inputText').value.trim();
+    if (!text) {
+        showResult('⚠️ Please enter some text to analyze', 'warning');
+        return;
+    }
+    showLoading();
+
+    try {
+        const response = await fetch(API_CONFIG.MISINFORMATION_EXPLAIN_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: text })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("API Response:", data); // 👈 Debugging
+
+        if (data && typeof data === 'object' && data.explanation_html) {
+            let fullHtml = data.explanation_html;
+            let bodyContent = fullHtml;
+
+            // Extract only body content if tags exist
+            if (fullHtml.includes("<body>")) {
+                const start = fullHtml.indexOf("<body>") + 6;
+                const end = fullHtml.indexOf("</body>");
+                bodyContent = fullHtml.substring(start, end);
+            }
+
+            const resultEl = document.getElementById('result');
+
+            if (resultEl.tagName.toLowerCase() === "textarea") {
+                resultEl.value = bodyContent;   // For textarea
+            } else {
+                resultEl.innerHTML = bodyContent; // For div/p/section etc.
+            }
+
+            resultEl.className = "result-safe";
+        } else {
+            showResult('⚠️ The explanation could not be generated or was empty.', 'warning');
+        }
+
+    } catch (error) {
+        console.error('Explanation error:', error);
+        showResult(`🔴 Error: ${error.message}. Please check your API connection.`, 'warning');
+    } finally {
+        hideLoading();
+    }
+}*/
+/*.explain-btn {
+  background: linear-gradient(135deg, #a7eaff, #a0fab1);
+  color: black;
+  }
+.explain-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+<button class="classify-btn explain-btn" onclick="checkExplanation()">
+        📈 Explain Prediction
+      </button>
+*/
+    /*document.getElementById('inputText').addEventListener('focus', function() {
+      if (!this.value) {
+        const examples = [
+          "Breaking: Scientists discover amazing new treatment that doctors don't want you to know about!",
+          "I really enjoyed this movie, the acting was great and the plot was engaging.",
+          "Those people are so stupid, they should all just disappear from our country.",
+          "According to a peer-reviewed study published in Nature, the new medication showed 67% efficacy in clinical trials."
+        ];
+        this.placeholder = examples[Math.floor(Math.random() * examples.length)];
+      }
+    });*/
+  </script>
+</body>
+</html>
