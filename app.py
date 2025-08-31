@@ -27,11 +27,14 @@ class TextIn(BaseModel):
 
 # Create the FastAPI app
 app = FastAPI()
+
+# Tell FastAPI where your 'static' folder is
+app.mount("/static", StaticFiles(directory="static"), name="static")
 # --- ADD THIS CODE BLOCK ---
 # This defines the homepage route
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to CipherMinds! It's working!"}
+async def read_index():
+    return FileResponse('static/index.html')
 # Add CORS middleware to allow requests from your frontend
 origins = ["*"]
 app.add_middleware(
