@@ -27,7 +27,11 @@ class TextIn(BaseModel):
 
 # Create the FastAPI app
 app = FastAPI()
-
+# --- ADD THIS CODE BLOCK ---
+# This defines the homepage route
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to CipherMinds! It's working!"}
 # Add CORS middleware to allow requests from your frontend
 origins = ["*"]
 app.add_middleware(
