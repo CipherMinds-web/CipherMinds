@@ -65,22 +65,29 @@ def preprocess_text(text):
 async def load_models_and_nltk():
     """Load the models and create a pipeline."""
     try:
+        print("--- Startup initiated ---")
+        print(f"Base directory: {BASE_DIR}")
+        print(f"Looking for TFIDF model at: {TFIDF_PATH}")
+        print(f"Looking for LogReg model at: {LOGREG_PATH}")
+        print("Downloading NLTK data...")
+        
         warnings.filterwarnings("ignore", category=UserWarning)
 
         nltk.download('stopwords', quiet=True)
         nltk.download('wordnet', quiet=True)
         nltk.download('punkt', quiet=True)
-        
+        print("NLTK download complete.")
         global lemmatizer, stop_words
         lemmatizer = WordNetLemmatizer()
         stop_words = set(stopwords.words('english'))
         
         if not os.path.exists(TFIDF_PATH) or not os.path.exists(LOGREG_PATH):
              raise FileNotFoundError("Misinformation model files not found.")
-        
+        print("Model files found. Loading vectorizer...")
         models['misinformation_vectorizer'] = joblib.load(TFIDF_PATH)
+        print("Loading classifier...")
         models['misinformation_classifier'] = joblib.load(LOGREG_PATH)
-        
+        print("Misinformation models loaded successfully.")
         models['hate_speech_vectorizer'] = TfidfVectorizer()
         models['hate_speech_classifier'] = LinearSVC(C=1.0)
         
@@ -91,9 +98,11 @@ async def load_models_and_nltk():
         models['hate_speech_classifier'].fit(X_vectorized, y_dummy)
 
     except FileNotFoundError as e:
+        print(f"CRITICAL STARTUP ERROR (FileNotFoundError): {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        print(f"CRITICAL STARTUP ERROR (Exception): {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to load models: {e}")
 
