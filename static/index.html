@@ -84,6 +84,7 @@
       font-weight: 700;
       background: black;
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: 10px;
     }
@@ -384,11 +385,9 @@
 
     // API Configuration - Update these URLs to match your model endpoints
     const API_CONFIG = {
-      HATE_SPEECH_API: 'http://127.0.0.1:8000/api/hate-speech',   // Replace with your hate speech model API
-      MISINFORMATION_EXPLAIN_API: 'http://127.0.0.1:8000/api/misinformation-explain',
-      MISINFORMATION_API: 'http://127.0.0.1:8000/api/misinformation',  // Replace with your misinformation model API
-      API_KEY: 'your-api-key-here'  // Add your API key if needed
-    };
+  HATE_SPEECH_API: 'https://cipherminds.onrender.com/api/hate-speech',
+  MISINFORMATION_API: 'https://cipherminds.onrender.com/api/misinformation'
+  };
 
     // Generic function to call your trained models
     async function callModel(apiUrl, text, modelType) {
@@ -397,7 +396,6 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_CONFIG.API_KEY}`,  // Remove if no API key needed
           },
           body: JSON.stringify({
             text: text,
@@ -479,7 +477,7 @@
     }
 
     // Process hate speech model results - CUSTOMIZE THIS based on your model's output
-    function processHateSpeechResult(modelResult) {
+    /*function processHateSpeechResult(modelResult) {
       // Example expected format from your model:
       // { prediction: "hate/not_hate", confidence: 0.85, explanation: "..." }
       
@@ -506,7 +504,31 @@
           type: 'safe'
         };
       }
-    }
+    }*/
+    // Replace the old function with this one
+function processHateSpeechResult(modelResult) {
+  const confidence = modelResult.confidence || 0;
+  const prediction = modelResult.prediction || 'unknown';
+  const explanation = modelResult.explanation || '';
+  const confidencePercent = Math.round(confidence * 100);
+
+  if (prediction === "Hate Speech") {
+    return {
+      message: `🚨 HATE SPEECH DETECTED (${confidencePercent}% confidence)\n${explanation}`,
+      type: 'danger'
+    };
+  } else if (prediction === "Offensive Language") {
+    return {
+      message: `⚠️ OFFENSIVE LANGUAGE DETECTED (${confidencePercent}% confidence)\n${explanation}`,
+      type: 'warning'
+    };
+  } else { // "Neither"
+    return {
+      message: `✅ SAFE CONTENT (${confidencePercent}% confidence)\nNo hate speech detected.`,
+      type: 'safe'
+    };
+  }
+}
 
     // Process misinformation model results - CUSTOMIZE THIS based on your model's output
     function processMisinformationResult(modelResult) {
