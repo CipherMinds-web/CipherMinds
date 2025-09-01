@@ -475,36 +475,6 @@
         showResult('🔴 Error: Could not analyze text. Please try again.', 'warning');
       }
     }
-
-    // Process hate speech model results - CUSTOMIZE THIS based on your model's output
-    /*function processHateSpeechResult(modelResult) {
-      // Example expected format from your model:
-      // { prediction: "hate/not_hate", confidence: 0.85, explanation: "..." }
-      
-      const confidence = modelResult.confidence || modelResult.score || 0;
-      const prediction = modelResult.prediction || modelResult.label || 'unknown';
-      const explanation = modelResult.explanation || modelResult.reason || '';
-      
-      const confidencePercent = Math.round(confidence * 100);
-      
-      // Determine result type based on your model's output
-      if (prediction.toLowerCase().includes('hate') || prediction === 1) {
-        return {
-          message: `🚨 HATE SPEECH DETECTED (${confidencePercent}% confidence)\n${explanation}`,
-          type: 'danger'
-        };
-      } else if (confidence < 0.7) {  // Low confidence threshold
-        return {
-          message: `⚠️ UNCERTAIN CLASSIFICATION (${confidencePercent}% confidence)\nContent may need human review. ${explanation}`,
-          type: 'warning'
-        };
-      } else {
-        return {
-          message: `✅ SAFE CONTENT (${confidencePercent}% confidence)\nNo hate speech detected. ${explanation}`,
-          type: 'safe'
-        };
-      }
-    }*/
     // Replace the old function with this one
 function processHateSpeechResult(modelResult) {
   const confidence = modelResult.confidence || 0;
